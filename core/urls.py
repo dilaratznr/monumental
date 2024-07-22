@@ -8,5 +8,5 @@ def home(request):
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('brickpose.urls')),
-    path('', home, name='home'),  # Ana sayfa URL'i eklendi
+    path('', home, name='home'),
 ]

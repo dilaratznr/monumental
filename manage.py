@@ -3,9 +3,10 @@
 import os
 import sys
 
-
 def main():
-    """Run administrative tasks."""
+    # Burada image_processing modülünün yolunu ekliyoruz
+    sys.path.append('/Users/dilaratuzuner/Desktop/brick_pose_estimation/image_processing')
+    
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
     try:
         from django.core.management import execute_from_command_line
@@ -16,7 +17,6 @@ def main():
             "forget to activate a virtual environment?"
         ) from exc
     execute_from_command_line(sys.argv)
-
 
 if __name__ == '__main__':
     main()

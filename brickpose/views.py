@@ -1,32 +1,45 @@
-from django.shortcuts import render
-
-# Create your views here.
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
-from .repositories.image_repository import ImageRepository
+import os
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
 from .services.pose_service import PoseService
 
-class ProcessImageView(APIView):
-    def post(self, request, *args, **kwargs):
-        try:
-            rgb_file = request.FILES['image']
-            depth_file = request.FILES['depth_image']
-            
-            # Görüntüleri yükleyin
-            rgb_image, depth_image = ImageRepository.load_images(rgb_file, depth_file)
-            
-            # Tuğlanın pozunu hesaplayın
-            position, orientation = PoseService.process_image(rgb_image, depth_image)
-            
-            if position is None:
-                return Response({'error': 'Brick not found'}, status=status.HTTP_400_BAD_REQUEST)
-            
-            # Sonucu JSON formatında döndürün
-            return Response({
-                'position': position.tolist(),
-                'orientation': orientation.tolist()
-            }, status=status.HTTP_200_OK)
-        
-        except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+@csrf_exempt
+def process_images_from_request(request):
+    """
+    Django request nesnesinden dosyaları alır ve poz tahmini işlemini gerçekleştirir.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Invalid request method.'}, status=400)
+
+    color_image = request.FILES.get('color_image')
+    depth_image = request.FILES.get('depth_image')
+
+    if not color_image or not depth_image:
+        return JsonResponse({'error': 'Both color and depth images are required.'}, status=400)
+
+    # Dosyaları geçici olarak kaydet
+    color_image_path = 'temp_color.png'
+    depth_image_path = 'temp_depth.png'
+    try:
+        with open(color_image_path, 'wb+') as destination:
+            for chunk in color_image.chunks():
+                destination.write(chunk)
+        with open(depth_image_path, 'wb+') as destination:
+            for chunk in depth_image.chunks():
+                destination.write(chunk)
+
+        # Poz tahminini gerçekleştir
+        result = PoseService.process_image_files(color_image_path, depth_image_path)
+
+        # Geçici dosyaları sil
+        os.remove(color_image_path)
+        os.remove(depth_image_path)
+
+        return JsonResponse(result)
+
+    except Exception as e:
+        if os.path.exists(color_image_path):
+            os.remove(color_image_path)
+        if os.path.exists(depth_image_path):
+            os.remove(depth_image_path)
+        return JsonResponse({'error': str(e)}, status=500)
