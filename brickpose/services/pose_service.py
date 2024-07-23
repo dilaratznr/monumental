@@ -1,8 +1,8 @@
 import json
 import cv2
 import numpy as np
-import os
-from django.conf import settings
+
+from core import settings
 
 class PoseService:
     @staticmethod
@@ -30,17 +30,25 @@ class PoseService:
         color_image = cv2.imread(color_image_path)
         depth_image = cv2.imread(depth_image_path, cv2.IMREAD_UNCHANGED)
 
-        # Burada gerçek görüntü işleme kodunu ekleyin
-        # Örneğin, bazı basit işleme adımları:
+        # Perform actual pose estimation here
+        # Placeholder for the algorithm to estimate pose (position and orientation)
         processed_image = cv2.cvtColor(color_image, cv2.COLOR_BGR2GRAY)
-        processed_image_path = os.path.join(settings.MEDIA_ROOT, 'processed_image.png')
+
+        # Example processed image path for visualization
+        processed_image_path = 'processed_image.png'
         cv2.imwrite(processed_image_path, processed_image)
+
+        # Placeholder results for demonstration
+        translation = [100, 50, 30]  # Example translation in millimeters
+        rotation = [10, 5, 2]  # Example rotation in degrees (roll, pitch, yaw)
 
         result = {
             'color_image_path': color_image_path,
             'depth_image_path': depth_image_path,
             'processed_image_mean_intensity': np.mean(processed_image),
             'camera_params': camera_params,
-            'processed_image_path': processed_image_path
+            'processed_image_path': f"{settings.MEDIA_URL}{processed_image_path}",
+            'translation': translation,
+            'rotation': rotation
         }
         return result
