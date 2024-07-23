@@ -64,38 +64,51 @@
 <body>
     <div class="container">
         <h1>Processed Image Result</h1>
-        <div class="section">
-            <h2>Original Images</h2>
-            <h3>Color Image</h3>
-            <img src="{{ result.color_image_path }}" alt="Color Image">
-            <h3>Depth Image</h3>
-            <img src="{{ result.depth_image_path }}" alt="Depth Image">
-        </div>
-        <div class="section">
-            <h2>Processed Image</h2>
-            <img src="{{ result.processed_image_path }}" alt="Processed Image">
-        </div>
-        <div class="section">
-            <h2>Processed Image Mean Intensity</h2>
-            <p>{{ result.processed_image_mean_intensity }}</p>
-        </div>
-        <div class="section">
-            <h2>Camera Parameters</h2>
-            <ul>
-                <li><strong>Width:</strong> {{ result.camera_params.width }}</li>
-                <li><strong>Height:</strong> {{ result.camera_params.height }}</li>
-                <li><strong>fx:</strong> {{ result.camera_params.fx }}</li>
-                <li><strong>fy:</strong> {{ result.camera_params.fy }}</li>
-                <li><strong>px:</strong> {{ result.camera_params.px }}</li>
-                <li><strong>py:</strong> {{ result.camera_params.py }}</li>
-                <li><strong>Dist Coeffs:</strong> {{ result.camera_params.dist_coeffs }}</li>
-            </ul>
-        </div>
-        <div class="section">
-            <h2>Estimated 3D Pose</h2>
-            <p><strong>Translation (mm):</strong> {{ result.translation }}</p>
-            <p><strong>Rotation (degrees):</strong> {{ result.rotation }}</p>
-        </div>
+
+        <form method="get" action="">
+            <label for="folder">Select Folder:</label>
+            <select name="folder" id="folder" onchange="this.form.submit()">
+                <option value="">--Select Folder--</option>
+                {% for folder in folders %}
+                    <option value="{{ folder }}" {% if folder == selected_folder %}selected{% endif %}>{{ folder }}</option>
+                {% endfor %}
+            </select>
+        </form>
+
+        {% if result %}
+            <div class="section">
+                <h2>Original Images</h2>
+                <h3>Color Image</h3>
+                <img src="{{ result.color_image_path }}" alt="Color Image">
+                <h3>Depth Image</h3>
+                <img src="{{ result.depth_image_path }}" alt="Depth Image">
+            </div>
+            <div class="section">
+                <h2>Processed Image</h2>
+                <img src="{{ result.processed_image_path }}" alt="Processed Image">
+            </div>
+            <div class="section">
+                <h2>Processed Image Mean Intensity</h2>
+                <p>{{ result.processed_image_mean_intensity }}</p>
+            </div>
+            <div class="section">
+                <h2>Camera Parameters</h2>
+                <ul>
+                    <li><strong>Width:</strong> {{ result.camera_params.width }}</li>
+                    <li><strong>Height:</strong> {{ result.camera_params.height }}</li>
+                    <li><strong>fx:</strong> {{ result.camera_params.fx }}</li>
+                    <li><strong>fy:</strong> {{ result.camera_params.fy }}</li>
+                    <li><strong>px:</strong> {{ result.camera_params.px }}</li>
+                    <li><strong>py:</strong> {{ result.camera_params.py }}</li>
+                    <li><strong>Dist Coeffs:</strong> {{ result.camera_params.dist_coeffs }}</li>
+                </ul>
+            </div>
+            <div class="section">
+                <h2>Estimated 3D Pose</h2>
+                <p><strong>Translation (mm):</strong> {{ result.translation }}</p>
+                <p><strong>Rotation (degrees):</strong> {{ result.rotation }}</p>
+            </div>
+        {% endif %}
     </div>
     <div class="footer">
         <p>© 2024 Brick Pose Estimation. All rights reserved.</p>

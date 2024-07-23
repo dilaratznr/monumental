@@ -1,10 +1,9 @@
-# brickpose/views.py
-
 import os
+import json
 import uuid
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from .services.pose_service import PoseService
 from django.conf import settings
 
@@ -53,29 +52,20 @@ def process_images_from_request(request):
         return JsonResponse({'error': str(e)}, status=500)
 
 def display_results(request):
-    folder_number = 0  # This can be dynamic based on your requirements
+    folders = sorted([d for d in os.listdir(os.path.join(settings.MEDIA_ROOT, 'place_quality_inputs')) if os.path.isdir(os.path.join(settings.MEDIA_ROOT, 'place_quality_inputs', d))])
+
+    selected_folder = request.GET.get('folder')
+    if selected_folder is not None:
+        folder_path = os.path.join(settings.MEDIA_ROOT, 'place_quality_inputs', selected_folder)
+        color_image_path = os.path.join(folder_path, 'color.png')
+        depth_image_path = os.path.join(folder_path, 'depth.png')
+        camera_params_path = os.path.join(folder_path, 'cam.json')
+
+        result = PoseService.process_image_files(color_image_path, depth_image_path, camera_params_path)
+        result['color_image_path'] = f"{settings.MEDIA_URL}place_quality_inputs/{selected_folder}/color.png"
+        result['depth_image_path'] = f"{settings.MEDIA_URL}place_quality_inputs/{selected_folder}/depth.png"
+        result['processed_image_path'] = f"{settings.MEDIA_URL}results/{os.path.basename(result['processed_image_path'])}"
+
+        return render(request, 'result.html', {'result': result, 'folders': folders, 'selected_folder': selected_folder})
     
-    color_image_path = f"place_quality_inputs/{folder_number}/color.png"
-    depth_image_path = f"place_quality_inputs/{folder_number}/depth.png"
-    processed_image_filename = "d659e799-33bd-4718-8a92-bf67be955106_processed.png"  # Adjust as needed
-    processed_image_path = f"results/{processed_image_filename}"
-    
-    example_result = {
-        'color_image_path': f"{settings.MEDIA_URL}{color_image_path}",
-        'depth_image_path': f"{settings.MEDIA_URL}{depth_image_path}",
-        'processed_image_path': f"{settings.MEDIA_URL}{processed_image_path}",
-        'processed_image_mean_intensity': 105.7033190841195,  # Example value
-        'camera_params': {
-            'width': 848,
-            'height': 480,
-            'fx': 434.5079345703125,
-            'fy': 434.5079345703125,
-            'px': 427.6170654296875,
-            'py': 238.77597045898438,
-            'dist_coeffs': [0.0, 0.0, 0.0, 0.0, 0.0]
-        },
-        'translation': [100, 50, 25],  # Example value
-        'rotation': [0, 90, 0]  # Example value
-    }
-    
-    return render(request, 'result.html', {'result': example_result})
+    return render(request, 'result.html', {'folders': folders})
