@@ -1,8 +1,8 @@
-# brickpose/services/pose_service.py
-
 import json
 import cv2
 import numpy as np
+import os
+from django.conf import settings
 
 class PoseService:
     @staticmethod
@@ -33,11 +33,14 @@ class PoseService:
         # Burada gerçek görüntü işleme kodunu ekleyin
         # Örneğin, bazı basit işleme adımları:
         processed_image = cv2.cvtColor(color_image, cv2.COLOR_BGR2GRAY)
+        processed_image_path = os.path.join(settings.MEDIA_ROOT, 'processed_image.png')
+        cv2.imwrite(processed_image_path, processed_image)
 
         result = {
             'color_image_path': color_image_path,
             'depth_image_path': depth_image_path,
             'processed_image_mean_intensity': np.mean(processed_image),
-            'camera_params': camera_params
+            'camera_params': camera_params,
+            'processed_image_path': processed_image_path
         }
         return result
