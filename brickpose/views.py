@@ -1,3 +1,5 @@
+# brickpose/views.py
+
 import os
 import uuid
 from django.http import JsonResponse
@@ -5,7 +7,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.shortcuts import render
 from .services.pose_service import PoseService
 from django.conf import settings
-
+from django.shortcuts import render
 @csrf_exempt
 def process_images_from_request(request):
     if request.method != 'POST':
@@ -37,7 +39,7 @@ def process_images_from_request(request):
         result = PoseService.process_image_files(color_image_path, depth_image_path, camera_params_path)
         result['color_image_path'] = f"{settings.MEDIA_URL}{unique_id}_color.png"
         result['depth_image_path'] = f"{settings.MEDIA_URL}{unique_id}_depth.png"
-        result['processed_image_path'] = f"{settings.MEDIA_URL}processed_image.png"
+        result['processed_image_path'] = f"{settings.MEDIA_URL}{unique_id}_processed.png"
 
         return JsonResponse(result)
 
@@ -48,13 +50,18 @@ def process_images_from_request(request):
             os.remove(depth_image_path)
         if os.path.exists(camera_params_path):
             os.remove(camera_params_path)
-        return JsonResponse({'error': str(e)}, status=500)
-
 def display_results(request):
+    folder_number = 0  # This can be dynamic based on your requirements
+    
+    color_image_path = f"place_quality_inputs/{folder_number}/color.png"
+    depth_image_path = f"place_quality_inputs/{folder_number}/depth.png"
+    processed_image_path = f"place_quality_inputs/{folder_number}/processed_image.png"
+    
     example_result = {
-        'color_image_path': f"{settings.MEDIA_URL}example_color.png",
-        'depth_image_path': f"{settings.MEDIA_URL}example_depth.png",
-        'processed_image_mean_intensity': 105.7033190841195,
+        'color_image_path': f"{settings.MEDIA_URL}{color_image_path}",
+        'depth_image_path': f"{settings.MEDIA_URL}{depth_image_path}",
+        'processed_image_path': f"{settings.MEDIA_URL}{processed_image_path}",
+        'processed_image_mean_intensity': 105.7033190841195,  # Example value
         'camera_params': {
             'width': 848,
             'height': 480,
@@ -64,6 +71,8 @@ def display_results(request):
             'py': 238.77597045898438,
             'dist_coeffs': [0.0, 0.0, 0.0, 0.0, 0.0]
         },
-        'processed_image_path': f"{settings.MEDIA_URL}example_processed.png"
+        'translation': [100, 50, 25],  # Example value
+        'rotation': [0, 90, 0]  # Example value
     }
+    
     return render(request, 'result.html', {'result': example_result})

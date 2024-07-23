@@ -1,8 +1,7 @@
 import json
 import cv2
 import numpy as np
-
-from core import settings
+from scipy.spatial.transform import Rotation as R
 
 class PoseService:
     @staticmethod
@@ -30,25 +29,37 @@ class PoseService:
         color_image = cv2.imread(color_image_path)
         depth_image = cv2.imread(depth_image_path, cv2.IMREAD_UNCHANGED)
 
-        # Perform actual pose estimation here
-        # Placeholder for the algorithm to estimate pose (position and orientation)
+        # Dummy brick detection and pose estimation (to be replaced with actual algorithm)
+        brick_center = (color_image.shape[1] // 2, color_image.shape[0] // 2)
+        brick_depth = depth_image[brick_center[1], brick_center[0]] * 0.1  # Depth in mm
+
+        # Translate pixel coordinates to 3D coordinates
+        x = (brick_center[0] - camera_params['px']) * brick_depth / camera_params['fx']
+        y = (brick_center[1] - camera_params['py']) * brick_depth / camera_params['fy']
+        z = brick_depth
+
+        translation = [x, y, z]
+
+        # Dummy rotation values (to be replaced with actual calculation)
+        rotation = [0, 0, 0]  # Roll, pitch, yaw
+
+        # Process the image (dummy processing)
         processed_image = cv2.cvtColor(color_image, cv2.COLOR_BGR2GRAY)
 
-        # Example processed image path for visualization
-        processed_image_path = 'processed_image.png'
-        cv2.imwrite(processed_image_path, processed_image)
+        # Draw a rectangle around the detected brick (dummy visualization)
+        cv2.rectangle(color_image, (brick_center[0] - 50, brick_center[1] - 25), (brick_center[0] + 50, brick_center[1] + 25), (0, 255, 0), 2)
 
-        # Placeholder results for demonstration
-        translation = [100, 50, 30]  # Example translation in millimeters
-        rotation = [10, 5, 2]  # Example rotation in degrees (roll, pitch, yaw)
+        # Save the processed image
+        processed_image_path = color_image_path.replace('_color.png', '_processed.png')
+        cv2.imwrite(processed_image_path, color_image)
 
         result = {
             'color_image_path': color_image_path,
             'depth_image_path': depth_image_path,
             'processed_image_mean_intensity': np.mean(processed_image),
             'camera_params': camera_params,
-            'processed_image_path': f"{settings.MEDIA_URL}{processed_image_path}",
             'translation': translation,
-            'rotation': rotation
+            'rotation': rotation,
+            'processed_image_path': processed_image_path
         }
         return result
