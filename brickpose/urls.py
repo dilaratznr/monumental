@@ -1,7 +1,10 @@
+# core/urls.py
 from django.contrib import admin
-from django.urls import path, include
+from django.urls import path
+from brickpose.views import process_images_from_request
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/', include('core.urls')),  # core.urls dosyasını dahil ediyoruz
+    path('api/process_image/', process_images_from_request, name='process_image'),
+    
 ]
