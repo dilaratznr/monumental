@@ -1,6 +1,7 @@
 # brickpose/services/pose_service.py
 
 import json
+import cv2
 import numpy as np
 
 class PoseService:
@@ -10,18 +11,13 @@ class PoseService:
             with open(camera_params_path, 'r') as f:
                 camera_params = json.load(f)
                 
-            # Debugging camera parameters
             print(f"DEBUG: Loaded camera parameters: {camera_params}")
 
-            # Assuming that `camera_params['dist_coeffs']` is the source of the error
             if isinstance(camera_params['dist_coeffs'], list):
-                print("DEBUG: Converting dist_coeffs list to NumPy array")
                 camera_params['dist_coeffs'] = np.array(camera_params['dist_coeffs'])
 
-            # Process the images here
-            result = PoseService.dummy_process(color_image_path, depth_image_path, camera_params)
+            result = PoseService.process_images(color_image_path, depth_image_path, camera_params)
             
-            # Convert NumPy arrays back to lists before returning the result
             result['camera_params']['dist_coeffs'] = result['camera_params']['dist_coeffs'].tolist()
             
             return result
@@ -30,12 +26,18 @@ class PoseService:
             return {'error': str(e)}
 
     @staticmethod
-    def dummy_process(color_image_path, depth_image_path, camera_params):
-        # This function would contain the actual image processing code.
-        # For demonstration purposes, we'll return a mock result.
+    def process_images(color_image_path, depth_image_path, camera_params):
+        color_image = cv2.imread(color_image_path)
+        depth_image = cv2.imread(depth_image_path, cv2.IMREAD_UNCHANGED)
+
+        # Burada gerçek görüntü işleme kodunu ekleyin
+        # Örneğin, bazı basit işleme adımları:
+        processed_image = cv2.cvtColor(color_image, cv2.COLOR_BGR2GRAY)
+
         result = {
             'color_image_path': color_image_path,
             'depth_image_path': depth_image_path,
+            'processed_image_mean_intensity': np.mean(processed_image),
             'camera_params': camera_params
         }
         return result
