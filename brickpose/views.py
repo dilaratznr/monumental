@@ -7,7 +7,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.shortcuts import render
 from .services.pose_service import PoseService
 from django.conf import settings
-from django.shortcuts import render
+
 @csrf_exempt
 def process_images_from_request(request):
     if request.method != 'POST':
@@ -39,7 +39,7 @@ def process_images_from_request(request):
         result = PoseService.process_image_files(color_image_path, depth_image_path, camera_params_path)
         result['color_image_path'] = f"{settings.MEDIA_URL}{unique_id}_color.png"
         result['depth_image_path'] = f"{settings.MEDIA_URL}{unique_id}_depth.png"
-        result['processed_image_path'] = f"{settings.MEDIA_URL}{unique_id}_processed.png"
+        result['processed_image_path'] = f"{settings.MEDIA_URL}results/{os.path.basename(result['processed_image_path'])}"
 
         return JsonResponse(result)
 
@@ -50,12 +50,15 @@ def process_images_from_request(request):
             os.remove(depth_image_path)
         if os.path.exists(camera_params_path):
             os.remove(camera_params_path)
+        return JsonResponse({'error': str(e)}, status=500)
+
 def display_results(request):
     folder_number = 0  # This can be dynamic based on your requirements
     
     color_image_path = f"place_quality_inputs/{folder_number}/color.png"
     depth_image_path = f"place_quality_inputs/{folder_number}/depth.png"
-    processed_image_path = f"place_quality_inputs/{folder_number}/processed_image.png"
+    processed_image_filename = "d659e799-33bd-4718-8a92-bf67be955106_processed.png"  # Adjust as needed
+    processed_image_path = f"results/{processed_image_filename}"
     
     example_result = {
         'color_image_path': f"{settings.MEDIA_URL}{color_image_path}",

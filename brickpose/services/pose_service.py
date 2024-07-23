@@ -1,7 +1,11 @@
+# brickpose/services/pose_service.py
+
 import json
 import cv2
 import numpy as np
 from scipy.spatial.transform import Rotation as R
+import os
+from django.conf import settings
 
 class PoseService:
     @staticmethod
@@ -49,8 +53,11 @@ class PoseService:
         # Draw a rectangle around the detected brick (dummy visualization)
         cv2.rectangle(color_image, (brick_center[0] - 50, brick_center[1] - 25), (brick_center[0] + 50, brick_center[1] + 25), (0, 255, 0), 2)
 
-        # Save the processed image
-        processed_image_path = color_image_path.replace('_color.png', '_processed.png')
+        # Save the processed image in the results directory
+        results_dir = os.path.join(settings.MEDIA_ROOT, 'results')
+        os.makedirs(results_dir, exist_ok=True)
+        processed_image_filename = os.path.basename(color_image_path).replace('_color.png', '_processed.png')
+        processed_image_path = os.path.join(results_dir, processed_image_filename)
         cv2.imwrite(processed_image_path, color_image)
 
         result = {
