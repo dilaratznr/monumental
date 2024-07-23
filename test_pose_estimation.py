@@ -1,25 +1,39 @@
 import os
-import sys
+import requests
 
-# Proje dizinini Python yoluna ekleyin
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+# Base URL of your Django server
+base_url = 'http://localhost:8000/api/process_image/'
 
-from brickpose.services.pose_service import PoseService  # PoseService sınıfını doğru şekilde import edin
+# Folder paths
+folders = [str(i) for i in range(11)]
+base_path = 'place_quality_inputs'
 
-# Test scripti
-if __name__ == "__main__":
-    print("Executing PoseService script")
+for folder in folders:
+    print(f"Testing folder: {folder}")
+    
+    # Dosya yollarını tam olarak belirtelim
+    color_image_path = os.path.join(base_path, folder, 'color.png')
+    depth_image_path = os.path.join(base_path, folder, 'depth.png')
+    cam_json_path = os.path.join(base_path, folder, 'cam.json')
+
+    # Bu dosyaların var olup olmadığını kontrol edelim
+    print(f"DEBUG: Checking existence of files in folder {folder}:")
+    print(f"  Color image: {color_image_path} - Exists: {os.path.exists(color_image_path)}")
+    print(f"  Depth image: {depth_image_path} - Exists: {os.path.exists(depth_image_path)}")
+    print(f"  Camera params: {cam_json_path} - Exists: {os.path.exists(cam_json_path)}")
+
+    with open(color_image_path, 'rb') as color_file, open(depth_image_path, 'rb') as depth_file, open(cam_json_path, 'r') as cam_file:
+        response = requests.post(base_url, files={
+            'color_image': color_file,
+            'depth_image': depth_file,
+            'camera_params': cam_file
+        })
+
+    print(f"Folder {folder}:")
     try:
-        for i in range(11):  # Örneğin 11 klasör üzerinde test
-            color_image_path = f'/Users/dilaratuzuner/Desktop/brick_pose_estimation/place_quality_inputs/{i}/color_image_{i}.png'
-            depth_image_path = f'/Users/dilaratuzuner/Desktop/brick_pose_estimation/place_quality_inputs/{i}/depth_image_{i}.png'
-
-            if not os.path.exists(color_image_path) or not os.path.exists(depth_image_path):
-                print(f"Klasör {i} - Hata: Dosya yolları bulunamadı.")
-                continue
-
-            result = PoseService.process_image_files(color_image_path, depth_image_path)
-            print(f"Klasör {i} - Sonuç: {result}")
-
-    except Exception as e:
-        print(f"Error occurred: {e}")
+        print(response.json())
+    except requests.exceptions.JSONDecodeError:
+        print("Response is not in JSON format")
+        print(f"Response content: {response.content}")
+    print(response.status_code)
+    print()

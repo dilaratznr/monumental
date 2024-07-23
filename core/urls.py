@@ -1,12 +1,8 @@
 from django.contrib import admin
-from django.urls import path, include
-from django.http import HttpResponse
-
-def home(request):
-    return HttpResponse("Welcome to the Brick Pose Estimation API")
+from django.urls import path
+from brickpose.views import process_images_from_request
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/', include('brickpose.urls')),
-    path('', home, name='home'),
+    path('api/process_image/', process_images_from_request, name='process_image'),
 ]

@@ -1,6 +1,7 @@
-from django.urls import path
-from .views import ProcessImageView
+from django.contrib import admin
+from django.urls import path, include
 
 urlpatterns = [
-    path('process_image/', ProcessImageView.as_view(), name='process_image'),
+    path('admin/', admin.site.urls),
+    path('api/', include('core.urls')),  # core.urls dosyasını dahil ediyoruz
 ]
