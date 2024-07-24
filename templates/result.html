@@ -135,8 +135,8 @@
             </div>
             <div class="section">
                 <h2>Estimated 3D Pose</h2>
-                <p><strong>Translation (mm):</strong> {{ result.translation }}</p>
-                <p><strong>Rotation (degrees):</strong> {{ result.rotation }}</p>
+                <p><strong>Translation (mm):</strong> {{ formatted_translation }}</p>
+                <p><strong>Rotation (degrees):</strong> {{ formatted_rotation }}</p>
             </div>
         {% endif %}
     </div>
@@ -144,4 +144,5 @@
         <p>© 2024 Brick Pose Estimation. All rights reserved.</p>
     </div>
 </body>
+
 </html>

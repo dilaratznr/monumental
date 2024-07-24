@@ -1,8 +1,8 @@
-# image_processing/pose_estimation.py
-
 import cv2
 import numpy as np
 import json
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 
 def load_images_and_camera_params(paths):
     color_image = cv2.imread(paths['color_image_path'])
@@ -22,7 +22,7 @@ def calculate_3d_pose(color_image, depth_image, camera_params):
     points = []
     for v in range(depth_image.shape[0]):
         for u in range(depth_image.shape[1]):
-            z = depth_image[v, u] * 0.1
+            z = depth_image[v, u] * 0.1  # Depth scale
             if z > 0:
                 x = (u - cx) * z / fx
                 y = (v - cy) * z / fy
@@ -32,4 +32,22 @@ def calculate_3d_pose(color_image, depth_image, camera_params):
     
     # Estimate the pose of the brick (simplified example)
     centroid = np.mean(points, axis=0)
+
+    # Görselleştirme işlemi
+    visualize_pose(centroid)
+
     return centroid
+
+def visualize_pose(translation):
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    ax.scatter(0, 0, 0, c='r', marker='o', label='Camera Origin')
+    ax.scatter(*translation, c='b', marker='^', label='Estimated Brick Position')
+    ax.plot([0, translation[0]], [0, translation[1]], [0, translation[2]], 'g--')
+    ax.set_xlabel('X (mm)')
+    ax.set_ylabel('Y (mm)')
+    ax.set_zlabel('Z (mm)')
+    ax.set_title('Estimated 3D Pose of the Brick')
+    ax.legend()
+    plt.show()  # Veya fig.savefig('/path/to/save/pose_visualization.png') kullanabilirsiniz
+

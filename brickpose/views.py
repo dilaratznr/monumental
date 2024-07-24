@@ -50,7 +50,15 @@ def process_images_from_request(request):
         if os.path.exists(camera_params_path):
             os.remove(camera_params_path)
         return JsonResponse({'error': str(e)}, status=500)
+def format_translation_rotation(translation, rotation):
+    # Convert numpy float64 to regular float
+    translation = [float(coord) for coord in translation]
+    rotation = [float(angle) for angle in rotation]
 
+    translation_str = f"Translation (mm): [{translation[0]:.2f}, {translation[1]:.2f}, {translation[2]:.2f}]"
+    rotation_str = f"Rotation (degrees): [{rotation[0]:.2f}, {rotation[1]:.2f}, {rotation[2]:.2f}]"
+
+    return translation_str, rotation_str  
 def display_results(request):
     folders = sorted([d for d in os.listdir(os.path.join(settings.MEDIA_ROOT, 'place_quality_inputs')) if os.path.isdir(os.path.join(settings.MEDIA_ROOT, 'place_quality_inputs', d))])
 
@@ -66,6 +74,16 @@ def display_results(request):
         result['depth_image_path'] = f"{settings.MEDIA_URL}place_quality_inputs/{selected_folder}/depth.png"
         result['processed_image_path'] = f"{settings.MEDIA_URL}results/{os.path.basename(result['processed_image_path'])}"
 
-        return render(request, 'result.html', {'result': result, 'folders': folders, 'selected_folder': selected_folder})
+        # Format the translation and rotation
+        formatted_translation, formatted_rotation = format_translation_rotation(result['translation'], result['rotation'])
+
+        return render(request, 'result.html', {
+            'result': result,
+            'folders': folders,
+            'selected_folder': selected_folder,
+            'formatted_translation': formatted_translation,
+            'formatted_rotation': formatted_rotation
+        })
     
     return render(request, 'result.html', {'folders': folders})
+
