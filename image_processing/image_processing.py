@@ -1,4 +1,6 @@
+import os
 import cv2
+from django.conf import settings
 import numpy as np
 import json
 import matplotlib.pyplot as plt
@@ -35,10 +37,17 @@ def calculate_3d_pose(color_image, depth_image, camera_params):
 
     # Görselleştirme işlemi
     visualize_pose(centroid)
+    
+    
+    output_path = os.path.join(settings.MEDIA_ROOT, 'results', 'pose_visualization.png')
+    visualize_pose(centroid, output_path)
 
     return centroid
-
 def visualize_pose(translation):
+    # Görsel dosyasının kaydedileceği yol
+    output_path = os.path.join(settings.MEDIA_ROOT, 'results', 'pose_visualization.png')
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
     ax.scatter(0, 0, 0, c='r', marker='o', label='Camera Origin')
@@ -49,5 +58,8 @@ def visualize_pose(translation):
     ax.set_zlabel('Z (mm)')
     ax.set_title('Estimated 3D Pose of the Brick')
     ax.legend()
-    plt.show()  # Veya fig.savefig('/path/to/save/pose_visualization.png') kullanabilirsiniz
 
+    plt.savefig(output_path)
+    plt.close(fig)
+
+    return output_path  # Kaydedilen dosyanın yolunu döndür

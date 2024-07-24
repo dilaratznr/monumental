@@ -3,9 +3,13 @@ import json
 import uuid
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from django.shortcuts import render, redirect
+from django.shortcuts import render
 from .services.pose_service import PoseService
 from django.conf import settings
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 
 @csrf_exempt
 def process_images_from_request(request):
@@ -50,6 +54,7 @@ def process_images_from_request(request):
         if os.path.exists(camera_params_path):
             os.remove(camera_params_path)
         return JsonResponse({'error': str(e)}, status=500)
+
 def format_translation_rotation(translation, rotation):
     # Convert numpy float64 to regular float
     translation = [float(coord) for coord in translation]
@@ -58,7 +63,8 @@ def format_translation_rotation(translation, rotation):
     translation_str = f"Translation (mm): [{translation[0]:.2f}, {translation[1]:.2f}, {translation[2]:.2f}]"
     rotation_str = f"Rotation (degrees): [{rotation[0]:.2f}, {rotation[1]:.2f}, {rotation[2]:.2f}]"
 
-    return translation_str, rotation_str  
+    return translation_str, rotation_str
+
 def display_results(request):
     folders = sorted([d for d in os.listdir(os.path.join(settings.MEDIA_ROOT, 'place_quality_inputs')) if os.path.isdir(os.path.join(settings.MEDIA_ROOT, 'place_quality_inputs', d))])
 
@@ -77,13 +83,39 @@ def display_results(request):
         # Format the translation and rotation
         formatted_translation, formatted_rotation = format_translation_rotation(result['translation'], result['rotation'])
 
+        # Görselleştirme için output_path'i belirleyin ve visualize_pose fonksiyonunu çağırın
+        output_path = os.path.join(settings.MEDIA_ROOT, 'results', 'pose_visualization.png')
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+
+        # Pozisyonu alın ve görselleştirme fonksiyonunu çağırın
+        translation = result.get('translation', [0, 0, 0])  # Translation bilgisini alın
+        visualize_pose(translation, output_path)
+
+        # Görselin URL'sini result'a ekleyin
+        result['pose_visualization_path'] = f"{settings.MEDIA_URL}results/pose_visualization.png"
+
         return render(request, 'result.html', {
             'result': result,
             'folders': folders,
             'selected_folder': selected_folder,
             'formatted_translation': formatted_translation,
-            'formatted_rotation': formatted_rotation
+            'formatted_rotation': formatted_rotation,
+            'pose_visualization_path': result['pose_visualization_path']
         })
     
     return render(request, 'result.html', {'folders': folders})
 
+def visualize_pose(translation, output_path):
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    ax.scatter(0, 0, 0, c='r', marker='o', label='Camera Origin')
+    ax.scatter(*translation, c='b', marker='^', label='Estimated Brick Position')
+    ax.plot([0, translation[0]], [0, translation[1]], [0, translation[2]], 'g--')
+    ax.set_xlabel('X (mm)')
+    ax.set_ylabel('Y (mm)')
+    ax.set_zlabel('Z (mm)')
+    ax.set_title('Estimated 3D Pose of the Brick')
+    ax.legend()
+
+    plt.savefig(output_path)
+    plt.close(fig)
