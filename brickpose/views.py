@@ -54,13 +54,23 @@ def process_images_from_request(request):
         return JsonResponse({'error': str(e)}, status=500)
 
 def format_translation_rotation(translation, rotation):
-    translation = [float(coord) for coord in translation]
-    rotation = [float(angle) for angle in rotation]
+    try:
+        # Convert translation coordinates to float
+        translation = [float(coord) for coord in translation]
 
-    translation_str = f"Translation (mm): [{translation[0]:.2f}, {translation[1]:.2f}, {translation[2]:.2f}]"
-    rotation_str = f"Rotation (degrees): [{rotation[0]:.2f}, {rotation[1]:.2f}, {rotation[2]:.2f}]"
+        # Extract and convert the rotation angles to float
+        yaw = float(rotation.get('yaw', 0.0))
+        pitch = float(rotation.get('pitch', 0.0))
+        roll = float(rotation.get('roll', 0.0))
 
-    return translation_str, rotation_str
+        # Format the translation and rotation strings
+        translation_str = f"Translation (mm): [{translation[0]:.2f}, {translation[1]:.2f}, {translation[2]:.2f}]"
+        rotation_str = f"Rotation (degrees): [Yaw: {yaw:.2f}, Pitch: {pitch:.2f}, Roll: {roll:.2f}]"
+
+        return translation_str, rotation_str
+    except Exception as e:
+        return "Error formatting translation", f"Error formatting rotation: {str(e)}"
+
 def display_results(request):
     folders = sorted([d for d in os.listdir(os.path.join(settings.MEDIA_ROOT, 'place_quality_inputs')) if os.path.isdir(os.path.join(settings.MEDIA_ROOT, 'place_quality_inputs', d))])
 
