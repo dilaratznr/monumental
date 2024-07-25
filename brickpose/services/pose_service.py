@@ -1,5 +1,3 @@
-# brickpose/services/pose_service.py
-
 import json
 import cv2
 import numpy as np
@@ -11,16 +9,19 @@ class PoseService:
     @staticmethod
     def process_image_files(color_image_path, depth_image_path, camera_params_path):
         try:
+            # Kamera parametrelerini JSON dosyasından yükleyin
             with open(camera_params_path, 'r') as f:
                 camera_params = json.load(f)
-                
+            
             print(f"DEBUG: Loaded camera parameters: {camera_params}")
 
             if isinstance(camera_params['dist_coeffs'], list):
                 camera_params['dist_coeffs'] = np.array(camera_params['dist_coeffs'])
 
+            # Görüntüleri işleyin ve sonuçları alın
             result = PoseService.process_images(color_image_path, depth_image_path, camera_params)
             
+            # Kamera parametrelerindeki numpy dizisini listeye dönüştürün
             result['camera_params']['dist_coeffs'] = result['camera_params']['dist_coeffs'].tolist()
             
             return result
@@ -33,19 +34,23 @@ class PoseService:
         color_image = cv2.imread(color_image_path)
         depth_image = cv2.imread(depth_image_path, cv2.IMREAD_UNCHANGED)
 
+        if color_image is None or depth_image is None:
+            raise ValueError("Color or depth image could not be loaded.")
+
         # Dummy brick detection and pose estimation (to be replaced with actual algorithm)
         brick_center = (color_image.shape[1] // 2, color_image.shape[0] // 2)
         brick_depth = depth_image[brick_center[1], brick_center[0]] * 0.1  # Depth in mm
 
-        # Translate pixel coordinates to 3D coordinates
+        # 2D pixel coordinates to 3D coordinates conversion
         x = (brick_center[0] - camera_params['px']) * brick_depth / camera_params['fx']
         y = (brick_center[1] - camera_params['py']) * brick_depth / camera_params['fy']
         z = brick_depth
 
         translation = [x, y, z]
 
-        # Dummy rotation values (to be replaced with actual calculation)
-        rotation = [0, 0, 0]  # Roll, pitch, yaw
+        # Calculate normal vector and Euler angles
+        normal_vector = PoseService.calculate_normal_vector([[x, y, z], [x + 0.01, y, z], [x, y + 0.01, z]])
+        rotation = PoseService.calculate_euler_angles(normal_vector)
 
         # Process the image (dummy processing)
         processed_image = cv2.cvtColor(color_image, cv2.COLOR_BGR2GRAY)
@@ -70,3 +75,26 @@ class PoseService:
             'processed_image_path': processed_image_path
         }
         return result
+
+    @staticmethod
+    def calculate_normal_vector(points):
+        v1 = np.array(points[1]) - np.array(points[0])
+        v2 = np.array(points[2]) - np.array(points[0])
+        normal_vector = np.cross(v1, v2)
+        normal_vector = normal_vector / np.linalg.norm(normal_vector)
+        return normal_vector
+
+    @staticmethod
+    def calculate_euler_angles(normal_vector):
+        # Normal vektöründen dönüş matrisini oluşturma
+        z_axis = normal_vector
+        x_axis = np.array([1, 0, 0]) if not np.allclose(z_axis, [1, 0, 0]) else np.array([0, 1, 0])
+        y_axis = np.cross(z_axis, x_axis)
+        y_axis /= np.linalg.norm(y_axis)
+        x_axis = np.cross(y_axis, z_axis)
+        x_axis /= np.linalg.norm(x_axis)
+
+        rotation_matrix = np.vstack([x_axis, y_axis, z_axis]).T
+        r = R.from_matrix(rotation_matrix)
+        euler_angles = r.as_euler('xyz', degrees=True)
+        return euler_angles

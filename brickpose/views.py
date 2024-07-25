@@ -1,15 +1,13 @@
-import os
-import json
-import uuid
+from django.shortcuts import render
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from django.shortcuts import render
+import os
+import uuid
 from .services.pose_service import PoseService
 from django.conf import settings
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
 
 @csrf_exempt
 def process_images_from_request(request):
@@ -56,7 +54,6 @@ def process_images_from_request(request):
         return JsonResponse({'error': str(e)}, status=500)
 
 def format_translation_rotation(translation, rotation):
-    # Convert numpy float64 to regular float
     translation = [float(coord) for coord in translation]
     rotation = [float(angle) for angle in rotation]
 
@@ -64,46 +61,44 @@ def format_translation_rotation(translation, rotation):
     rotation_str = f"Rotation (degrees): [{rotation[0]:.2f}, {rotation[1]:.2f}, {rotation[2]:.2f}]"
 
     return translation_str, rotation_str
-
 def display_results(request):
     folders = sorted([d for d in os.listdir(os.path.join(settings.MEDIA_ROOT, 'place_quality_inputs')) if os.path.isdir(os.path.join(settings.MEDIA_ROOT, 'place_quality_inputs', d))])
 
     selected_folder = request.GET.get('folder')
-    if selected_folder is not None:
+    result = None
+    formatted_translation = None
+    formatted_rotation = None
+    
+    if selected_folder:
         folder_path = os.path.join(settings.MEDIA_ROOT, 'place_quality_inputs', selected_folder)
         color_image_path = os.path.join(folder_path, 'color.png')
         depth_image_path = os.path.join(folder_path, 'depth.png')
         camera_params_path = os.path.join(folder_path, 'cam.json')
 
         result = PoseService.process_image_files(color_image_path, depth_image_path, camera_params_path)
-        result['color_image_path'] = f"{settings.MEDIA_URL}place_quality_inputs/{selected_folder}/color.png"
-        result['depth_image_path'] = f"{settings.MEDIA_URL}place_quality_inputs/{selected_folder}/depth.png"
-        result['processed_image_path'] = f"{settings.MEDIA_URL}results/{os.path.basename(result['processed_image_path'])}"
+        
+        if result:
+            result['color_image_path'] = f"{settings.MEDIA_URL}place_quality_inputs/{selected_folder}/color.png"
+            result['depth_image_path'] = f"{settings.MEDIA_URL}place_quality_inputs/{selected_folder}/depth.png"
+            result['processed_image_path'] = f"{settings.MEDIA_URL}results/{os.path.basename(result['processed_image_path'])}"
 
-        # Format the translation and rotation
-        formatted_translation, formatted_rotation = format_translation_rotation(result['translation'], result['rotation'])
+            formatted_translation, formatted_rotation = format_translation_rotation(result['translation'], result['rotation'])
 
-        # Görselleştirme için output_path'i belirleyin ve visualize_pose fonksiyonunu çağırın
-        output_path = os.path.join(settings.MEDIA_ROOT, 'results', 'pose_visualization.png')
-        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+            output_path = os.path.join(settings.MEDIA_ROOT, 'results', 'pose_visualization.png')
+            os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
-        # Pozisyonu alın ve görselleştirme fonksiyonunu çağırın
-        translation = result.get('translation', [0, 0, 0])  # Translation bilgisini alın
-        visualize_pose(translation, output_path)
+            visualize_pose(result['translation'], output_path)
 
-        # Görselin URL'sini result'a ekleyin
-        result['pose_visualization_path'] = f"{settings.MEDIA_URL}results/pose_visualization.png"
+            result['pose_visualization_path'] = f"{settings.MEDIA_URL}results/pose_visualization.png"
 
-        return render(request, 'result.html', {
-            'result': result,
-            'folders': folders,
-            'selected_folder': selected_folder,
-            'formatted_translation': formatted_translation,
-            'formatted_rotation': formatted_rotation,
-            'pose_visualization_path': result['pose_visualization_path']
-        })
-    
-    return render(request, 'result.html', {'folders': folders})
+    return render(request, 'result.html', {
+        'result': result,
+        'folders': folders,
+        'selected_folder': selected_folder,
+        'formatted_translation': formatted_translation,
+        'formatted_rotation': formatted_rotation,
+        'pose_visualization_path': result.get('pose_visualization_path') if result else None
+    })
 
 def visualize_pose(translation, output_path):
     fig = plt.figure()
