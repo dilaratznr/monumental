@@ -18,3 +18,31 @@ The Monumental Project is designed to estimate the 3D pose of bricks using RGB-D
 
 ## Installation and Usage
 1. Clone the repository:
+git clone https://github.com/dilaratznr/monumental.git
+cd monumental
+
+2. Set up the virtual environment and install dependencies:
+
+python -m venv env
+source env/bin/activate
+pip install -r requirements.txt
+
+3. Run the Django server:
+python manage.py runserver
+
+## Docker Instructions
+1. **Load the Docker Image**:
+docker load -i brick_pose_estimation.tar
+
+
+2. **Run the Docker Container**:
+docker run [OPTIONS] dilaratznr/brick_pose_estimation
+
+## License
+
+## Contact
+dilaratuezuner@gmail.com
+
+
+
+
