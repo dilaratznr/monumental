@@ -4,14 +4,11 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 import os
 from django.conf import settings
-from .services.pose_service import PoseService
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-# Ensure you have the correct import path
-from image_processing.image_processing import process_images_and_save_rgbd,load_images_and_camera_params
+from image_processing.image_processing import process_images_and_save_rgbd, load_images_and_camera_params
 from mpl_toolkits.mplot3d import Axes3D
-
 import uuid
 
 @csrf_exempt
@@ -57,6 +54,7 @@ def process_images_from_request(request):
         if os.path.exists(camera_params_path):
             os.remove(camera_params_path)
         return JsonResponse({'error': str(e)}, status=500)
+
 def format_translation_rotation(translation, rotation):
     try:
         translation = [float(coord) for coord in translation]
@@ -70,7 +68,7 @@ def format_translation_rotation(translation, rotation):
         return translation_str, rotation_str
     except Exception as e:
         return "Error formatting translation", f"Error formatting rotation: {str(e)}"
-        return "Error formatting translation", f"Error formatting rotation: {str(e)}"
+
 def display_results(request):
     folders = sorted([
         d for d in os.listdir(os.path.join(settings.MEDIA_ROOT, 'place_quality_inputs'))
@@ -78,15 +76,7 @@ def display_results(request):
     ])
 
     selected_folder = request.GET.get('folder')
-    color_image_path = None
-    depth_image_path = None
-    rgbd_image_path = None
-    processed_image_path = None
-    pose_visualization_path = None
-    processed_image_mean_intensity = None
-    camera_params = None
-    formatted_translation = None
-    formatted_rotation = None
+    result = None
     
     if selected_folder:
         folder_path = os.path.join(settings.MEDIA_ROOT, 'place_quality_inputs', selected_folder)
@@ -94,6 +84,7 @@ def display_results(request):
         depth_image_path = os.path.join(settings.MEDIA_URL, 'place_quality_inputs', selected_folder, 'depth.png')
 
         absolute_rgbd_image_path, absolute_processed_image_path, absolute_pose_visualization_path, processed_image_mean_intensity, translation, rotation = process_images_and_save_rgbd(folder_path)
+        
         if absolute_rgbd_image_path:
             relative_rgbd_path = os.path.relpath(absolute_rgbd_image_path, settings.MEDIA_ROOT)
             rgbd_image_path = os.path.join(settings.MEDIA_URL, relative_rgbd_path).replace("\\", "/")
@@ -112,8 +103,7 @@ def display_results(request):
 
         formatted_translation, formatted_rotation = format_translation_rotation(translation, rotation)
 
-    return render(request, 'result.html', {
-        'result': {
+        result = {
             'color_image_path': color_image_path,
             'depth_image_path': depth_image_path,
             'rgbd_image_path': rgbd_image_path,
@@ -122,8 +112,11 @@ def display_results(request):
             'processed_image_mean_intensity': processed_image_mean_intensity,
             'camera_params': camera_params,
             'translation': formatted_translation,
-            'rotation': formatted_rotation,
-        },
+            'rotation': formatted_rotation
+        }
+
+    return render(request, 'result.html', {
         'folders': folders,
         'selected_folder': selected_folder,
+        'result': result
     })

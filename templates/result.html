@@ -146,12 +146,17 @@
                 <h2>Estimated 3D Pose Visualization</h2>
                 <img src="{{ result.pose_visualization_path }}" alt="Estimated 3D Pose Visualization">
             </div>
-            
-            
+        {% else %}
+            <div class="section">
+                <h2>Monumental Interview for Dilara Tüzüner</h2>
+                <p>Welcome to the processed image results page. Please select a folder from the dropdown above to view the results for each set of images.</p>
+                <p>This demonstration showcases the image processing capabilities for detecting and analyzing brick placements. The results include the original color and depth images, an RGB-D composite image, and a processed image highlighting key features such as detected contours and calculated 3D pose.</p>
+                <p>Feel free to explore the results for each folder provided in the zip file. The visualization includes detailed annotations and 3D pose estimations.</p>
+            </div>
         {% endif %}
     </div>
     <div class="footer">
-        <p>© 2024 Brick Pose Estimation. All rights reserved.</p>
+        <p>© 2024 Brick Pose Estimation. All rights reserved. Presented by Dilara Tüzüner.</p>
     </div>
 </body>
 </html>
