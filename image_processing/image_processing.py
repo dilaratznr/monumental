@@ -8,11 +8,27 @@ from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
 def load_images_and_camera_params(color_image_path, depth_image_path, camera_params_path):
-    color_image = cv2.imread(color_image_path)
-    depth_image = cv2.imread(depth_image_path, cv2.IMREAD_UNCHANGED)
-    with open(camera_params_path, 'r') as f:
-        camera_params = json.load(f)
-    return color_image, depth_image, camera_params
+    try:
+        color_image = cv2.imread(color_image_path)
+        if color_image is None:
+            raise FileNotFoundError(f"Color image not found at {color_image_path}")
+        
+        depth_image = cv2.imread(depth_image_path, cv2.IMREAD_UNCHANGED)
+        if depth_image is None:
+            raise FileNotFoundError(f"Depth image not found at {depth_image_path}")
+        
+        with open(camera_params_path, 'r') as f:
+            camera_params = json.load(f)
+        return color_image, depth_image, camera_params
+    except FileNotFoundError as fnf_error:
+        print(f"File not found: {fnf_error}")
+        return None, None, None
+    except json.JSONDecodeError:
+        print(f"Error decoding JSON from {camera_params_path}")
+        return None, None, None
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        return None, None, None
 
 def detect_brick_in_center(depth_image):
     height, width = depth_image.shape
@@ -174,6 +190,7 @@ def visualize_3d_pose(translation, rotation, save_path):
     plt.title('Estimated 3D Pose Visualization')
     plt.savefig(save_path)
     plt.close()
+
 def process_images_and_save_rgbd(folder_path):
     color_image_path = os.path.join(folder_path, 'color.png')
     depth_image_path = os.path.join(folder_path, 'depth.png')
@@ -187,9 +204,6 @@ def process_images_and_save_rgbd(folder_path):
         return None, None, None, None, None
 
     # Normalize the depth image and apply color mapping
-    depth_min, depth_max = depth_image.min(), depth_image.max()
-    if depth_max == depth_min:
-        depth_max += 1  # Avoid division by zero
     normalized_depth = cv2.normalize(depth_image, None, 0, 255, cv2.NORM_MINMAX, dtype=cv2.CV_8U)
     color_mapped_depth = cv2.applyColorMap(normalized_depth, cv2.COLORMAP_JET)
 
