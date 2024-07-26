@@ -4,6 +4,8 @@ import numpy as np
 import json
 from scipy.spatial.transform import Rotation as R
 from django.conf import settings
+from matplotlib import pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 
 def load_images_and_camera_params(color_image_path, depth_image_path, camera_params_path):
     color_image = cv2.imread(color_image_path)
@@ -79,27 +81,6 @@ def draw_brick_boundaries(image, contour, center, translation, rotation):
     print("Drawing completed. Center coordinates:", center_coords)
     print("3D Pose Information:", pose_text)
 
-    # Visualization of the Estimated 3D Pose
-    # Draw translation vector as an arrow
-    origin = (int(center[0]), int(center[1]))
-    translation_vector = (int(center[0] + translation[0] * 10), int(center[1] - translation[1] * 10))
-    cv2.arrowedLine(image, origin, translation_vector, (255, 255, 0), 2, tipLength=0.3)
-
-    # Visualize rotation using small arrows
-    rotation_vectors = {
-        'yaw': (np.cos(np.radians(rotation['yaw'])), np.sin(np.radians(rotation['yaw']))),
-        'pitch': (np.cos(np.radians(rotation['pitch'])), np.sin(np.radians(rotation['pitch']))),
-        'roll': (np.cos(np.radians(rotation['roll'])), np.sin(np.radians(rotation['roll'])))
-    }
-
-    # Drawing the rotation vectors
-    for angle_name, vector in rotation_vectors.items():
-        end_point = (int(center[0] + vector[0] * 50), int(center[1] + vector[1] * 50))
-        cv2.arrowedLine(image, origin, end_point, (0, 255, 255), 2, tipLength=0.3)
-        cv2.putText(image, angle_name, end_point, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 1, cv2.LINE_AA)
-
-    print("3D Pose Visualization drawn on image.")
-
 def calculate_3d_pose(depth_image, camera_params):
     fx = camera_params['fx']
     fy = camera_params['fy']
@@ -141,6 +122,46 @@ def calculate_3d_pose(depth_image, camera_params):
     rotation_dict = {'yaw': rotation[0], 'pitch': rotation[1], 'roll': rotation[2]}
 
     return translation, rotation_dict
+def visualize_3d_pose(translation, rotation, save_path):
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+
+    # Plot the translation point
+    ax.scatter(translation[0], translation[1], translation[2], color='r', label='Translation')
+    ax.text(translation[0], translation[1], translation[2], 
+            f"({translation[0]:.2f}, {translation[1]:.2f}, {translation[2]:.2f})",
+            color='red', fontsize=10, ha='right')
+
+    # Plot the rotation vectors (Yaw, Pitch, Roll)
+    rotation_angles = [rotation['yaw'], rotation['pitch'], rotation['roll']]
+    labels = ['Yaw', 'Pitch', 'Roll']
+    colors = ['g', 'b', 'm']
+    length = 50  # Vector length scale
+
+    # Apply each rotation separately
+    yaw_vector = R.from_euler('z', rotation['yaw'], degrees=True).apply([1, 0, 0])
+    pitch_vector = R.from_euler('y', rotation['pitch'], degrees=True).apply([0, 1, 0])
+    roll_vector = R.from_euler('x', rotation['roll'], degrees=True).apply([0, 0, 1])
+
+    vectors = [yaw_vector, pitch_vector, roll_vector]
+
+    for vector, label, color, angle in zip(vectors, labels, colors, rotation_angles):
+        ax.quiver(translation[0], translation[1], translation[2], 
+                  vector[0], vector[1], vector[2], 
+                  color=color, length=length, normalize=True, label=f"{label} ({angle:.2f}°)")
+        end_point = translation + vector * length
+        ax.text(end_point[0], end_point[1], end_point[2], 
+                f"{label}: {angle:.2f}°", color=color, fontsize=10, ha='center')
+
+    # Set labels and title
+    ax.set_xlabel('X axis')
+    ax.set_ylabel('Y axis')
+    ax.set_zlabel('Z axis')
+    ax.legend()
+
+    plt.title('Estimated 3D Pose Visualization')
+    plt.savefig(save_path)
+    plt.close()
 def process_images_and_save_rgbd(folder_path):
     color_image_path = os.path.join(folder_path, 'color.png')
     depth_image_path = os.path.join(folder_path, 'depth.png')
@@ -182,25 +203,6 @@ def process_images_and_save_rgbd(folder_path):
         for i, line in enumerate(pose_text.split('\n')):
             cv2.putText(processed_image, line, (10, y_offset + i * 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
 
-        # Visualization of the Estimated 3D Pose
-        # Draw translation vector as an arrow
-        origin = (int(center[0]), int(center[1]))
-        translation_vector = (int(center[0] + translation[0] * 10), int(center[1] - translation[1] * 10))
-        cv2.arrowedLine(processed_image, origin, translation_vector, (255, 255, 0), 2, tipLength=0.3)
-
-        # Visualize rotation using small arrows
-        rotation_vectors = {
-            'yaw': (np.cos(np.radians(rotation['yaw'])), np.sin(np.radians(rotation['yaw']))),
-            'pitch': (np.cos(np.radians(rotation['pitch'])), np.sin(np.radians(rotation['pitch']))),
-            'roll': (np.cos(np.radians(rotation['roll'])), np.sin(np.radians(rotation['roll'])))
-        }
-
-        # Drawing the rotation vectors
-        for angle_name, vector in rotation_vectors.items():
-            end_point = (int(center[0] + vector[0] * 50), int(center[1] + vector[1] * 50))
-            cv2.arrowedLine(processed_image, origin, end_point, (0, 255, 255), 2, tipLength=0.3)
-            cv2.putText(processed_image, angle_name, end_point, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 1, cv2.LINE_AA)
-
     results_dir = os.path.join(settings.MEDIA_ROOT, 'results')
     os.makedirs(results_dir, exist_ok=True, mode=0o755)
     
@@ -211,7 +213,9 @@ def process_images_and_save_rgbd(folder_path):
     # Save images
     cv2.imwrite(rgbd_image_path, rgbd_image)
     cv2.imwrite(processed_image_path, processed_image)
-    cv2.imwrite(pose_visualization_path, processed_image)
+
+    # Visualize 3D Pose with Matplotlib
+    visualize_3d_pose(translation, rotation, pose_visualization_path)
 
     # Return the paths and pose information
     return rgbd_image_path, processed_image_path, pose_visualization_path, np.mean(rgbd_image), translation, rotation

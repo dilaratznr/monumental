@@ -10,6 +10,7 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 # Ensure you have the correct import path
 from image_processing.image_processing import process_images_and_save_rgbd,load_images_and_camera_params
+from mpl_toolkits.mplot3d import Axes3D
 
 import uuid
 
