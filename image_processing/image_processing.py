@@ -57,7 +57,6 @@ def detect_brick_in_center(depth_image):
     
     print("No suitable contour found.")
     return None, (center_x, center_y)
-
 def draw_brick_boundaries(image, contour, center, translation, rotation):
     # Draw the contour if available
     if contour is not None:
@@ -65,18 +64,22 @@ def draw_brick_boundaries(image, contour, center, translation, rotation):
         x, y, w, h = cv2.boundingRect(contour)
         cv2.rectangle(image, (x, y), (x + w, y + h), (255, 0, 0), 2)
 
-    # Always mark the center and display coordinates
+    # Mark the center and display coordinates
     cv2.circle(image, center, 5, (0, 0, 255), -1)
     center_coords = f"Center: ({center[0]}, {center[1]})"
+    # Draw text with black outline and green fill
     cv2.putText(image, center_coords, (center[0] + 10, center[1] - 10), 
-                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
+                cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 0, 0), 5, cv2.LINE_AA)
+    cv2.putText(image, center_coords, (center[0] + 10, center[1] - 10), 
+                cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2, cv2.LINE_AA)
 
     # Display 3D Pose Information
     pose_text = (f"Translation (mm): x={translation[0]:.2f}, y={translation[1]:.2f}, z={translation[2]:.2f}\n"
                  f"Rotation (degrees): yaw={rotation['yaw']:.2f}, pitch={rotation['pitch']:.2f}, roll={rotation['roll']:.2f}")
-    y_offset = center[1] + 20
+    y_offset = center[1] + 30
     for i, line in enumerate(pose_text.split('\n')):
-        cv2.putText(image, line, (10, y_offset + i * 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
+        cv2.putText(image, line, (10, y_offset + i * 30), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 0, 0), 5, cv2.LINE_AA)
+        cv2.putText(image, line, (10, y_offset + i * 30), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2, cv2.LINE_AA)
 
     print("Drawing completed. Center coordinates:", center_coords)
     print("3D Pose Information:", pose_text)
@@ -162,6 +165,7 @@ def visualize_3d_pose(translation, rotation, save_path):
     plt.title('Estimated 3D Pose Visualization')
     plt.savefig(save_path)
     plt.close()
+# Save the processed image with the updated annotations
 def process_images_and_save_rgbd(folder_path):
     color_image_path = os.path.join(folder_path, 'color.png')
     depth_image_path = os.path.join(folder_path, 'depth.png')
@@ -195,13 +199,16 @@ def process_images_and_save_rgbd(folder_path):
         cv2.circle(processed_image, center, 10, (0, 0, 255), 2)  # Mark center if no contour found
         center_coords = f"Center: ({center[0]}, {center[1]})"
         cv2.putText(processed_image, center_coords, (center[0] + 10, center[1] - 10), 
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0), 5, cv2.LINE_AA)
+        cv2.putText(processed_image, center_coords, (center[0] + 10, center[1] - 10), 
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2, cv2.LINE_AA)
         # Display 3D Pose Information
         pose_text = (f"Translation (mm): x={translation[0]:.2f}, y={translation[1]:.2f}, z={translation[2]:.2f}\n"
                      f"Rotation (degrees): yaw={rotation['yaw']:.2f}, pitch={rotation['pitch']:.2f}, roll={rotation['roll']:.2f}")
-        y_offset = center[1] + 20
+        y_offset = center[1] + 30
         for i, line in enumerate(pose_text.split('\n')):
-            cv2.putText(processed_image, line, (10, y_offset + i * 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
+            cv2.putText(processed_image, line, (10, y_offset + i * 30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0), 5, cv2.LINE_AA)
+            cv2.putText(processed_image, line, (10, y_offset + i * 30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2, cv2.LINE_AA)
 
     results_dir = os.path.join(settings.MEDIA_ROOT, 'results')
     os.makedirs(results_dir, exist_ok=True, mode=0o755)
