@@ -70,10 +70,11 @@ def format_translation_rotation(translation, rotation):
         return "Error formatting translation", f"Error formatting rotation: {str(e)}"
 
 def display_results(request):
-    folders = sorted([
-        d for d in os.listdir(os.path.join(settings.MEDIA_ROOT, 'place_quality_inputs'))
-        if os.path.isdir(os.path.join(settings.MEDIA_ROOT, 'place_quality_inputs', d))
-    ])
+    # Fetch and sort folders numerically
+    folders = sorted(
+        [d for d in os.listdir(os.path.join(settings.MEDIA_ROOT, 'place_quality_inputs')) if os.path.isdir(os.path.join(settings.MEDIA_ROOT, 'place_quality_inputs', d))],
+        key=lambda x: int(x) if x.isdigit() else float('inf')
+    )
 
     selected_folder = request.GET.get('folder')
     result = None

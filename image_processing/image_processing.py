@@ -13,6 +13,7 @@ def load_images_and_camera_params(color_image_path, depth_image_path, camera_par
     with open(camera_params_path, 'r') as f:
         camera_params = json.load(f)
     return color_image, depth_image, camera_params
+
 def detect_brick_in_center(depth_image):
     height, width = depth_image.shape
     center_x, center_y = width // 2, height // 2
@@ -43,7 +44,7 @@ def detect_brick_in_center(depth_image):
             if (center_x - region_size / 2 < x + w / 2 < center_x + region_size / 2) and \
                (center_y - region_size / 2 < y + h / 2 < center_y + region_size / 2):
                 aspect_ratio = float(w) / h
-                if 0.3 < aspect_ratio < 3.0:  # Adjusted aspect ratio range
+                if 0.5 < aspect_ratio < 2.0:
                     if area > max_area:
                         max_area = area
                         largest_contour = contour
@@ -90,7 +91,6 @@ def draw_brick_boundaries(image, contour, center, translation, rotation):
 
     print("Drawing completed. Center coordinates:", center_coords)
     print("3D Pose Information:", pose_text)
-
 
 def calculate_3d_pose(depth_image, camera_params):
     fx = camera_params['fx']
@@ -174,8 +174,6 @@ def visualize_3d_pose(translation, rotation, save_path):
     plt.title('Estimated 3D Pose Visualization')
     plt.savefig(save_path)
     plt.close()
-
-
 def process_images_and_save_rgbd(folder_path):
     color_image_path = os.path.join(folder_path, 'color.png')
     depth_image_path = os.path.join(folder_path, 'depth.png')
@@ -188,11 +186,14 @@ def process_images_and_save_rgbd(folder_path):
         print("Error: One or both images could not be loaded.")
         return None, None, None, None, None
 
-    normalized_depth = cv2.normalize(depth_image, None, 0, 255, cv2.NORM_MINMAX)
-    normalized_depth = np.uint8(normalized_depth)
+    # Normalize the depth image and apply color mapping
+    depth_min, depth_max = depth_image.min(), depth_image.max()
+    if depth_max == depth_min:
+        depth_max += 1  # Avoid division by zero
+    normalized_depth = cv2.normalize(depth_image, None, 0, 255, cv2.NORM_MINMAX, dtype=cv2.CV_8U)
     color_mapped_depth = cv2.applyColorMap(normalized_depth, cv2.COLORMAP_JET)
 
-    # Create RGB-D image by overlaying depth map on color image
+    # Create RGB-D image by overlaying the color-mapped depth image onto the original color image
     alpha = 0.6
     rgbd_image = cv2.addWeighted(color_image, alpha, color_mapped_depth, 1 - alpha, 0)
 
@@ -235,4 +236,4 @@ def process_images_and_save_rgbd(folder_path):
     visualize_3d_pose(translation, rotation, pose_visualization_path)
 
     # Return the paths and pose information
-    return rgbd_image_path, processed_image_path, pose_visualization_path, np.mean(rgbd_image), translation, rotation
+    return rgbd_image_path, processed_image_path, pose_visualization_path, np.mean(normalized_depth), translation, rotation
