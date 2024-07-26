@@ -81,6 +81,7 @@ def display_results(request):
     depth_image_path = None
     rgbd_image_path = None
     processed_image_path = None
+    pose_visualization_path = None
     processed_image_mean_intensity = None
     camera_params = None
     formatted_translation = None
@@ -91,13 +92,16 @@ def display_results(request):
         color_image_path = os.path.join(settings.MEDIA_URL, 'place_quality_inputs', selected_folder, 'color.png')
         depth_image_path = os.path.join(settings.MEDIA_URL, 'place_quality_inputs', selected_folder, 'depth.png')
 
-        absolute_rgbd_image_path, absolute_processed_image_path, processed_image_mean_intensity, translation, rotation = process_images_and_save_rgbd(folder_path)
+        absolute_rgbd_image_path, absolute_processed_image_path, absolute_pose_visualization_path, processed_image_mean_intensity, translation, rotation = process_images_and_save_rgbd(folder_path)
         if absolute_rgbd_image_path:
             relative_rgbd_path = os.path.relpath(absolute_rgbd_image_path, settings.MEDIA_ROOT)
             rgbd_image_path = os.path.join(settings.MEDIA_URL, relative_rgbd_path).replace("\\", "/")
         if absolute_processed_image_path:
             relative_processed_path = os.path.relpath(absolute_processed_image_path, settings.MEDIA_ROOT)
             processed_image_path = os.path.join(settings.MEDIA_URL, relative_processed_path).replace("\\", "/")
+        if absolute_pose_visualization_path:
+            relative_pose_visualization_path = os.path.relpath(absolute_pose_visualization_path, settings.MEDIA_ROOT)
+            pose_visualization_path = os.path.join(settings.MEDIA_URL, relative_pose_visualization_path).replace("\\", "/")
 
         try:
             with open(os.path.join(folder_path, 'cam.json'), 'r') as f:
@@ -113,6 +117,7 @@ def display_results(request):
             'depth_image_path': depth_image_path,
             'rgbd_image_path': rgbd_image_path,
             'processed_image_path': processed_image_path,
+            'pose_visualization_path': pose_visualization_path,
             'processed_image_mean_intensity': processed_image_mean_intensity,
             'camera_params': camera_params,
             'translation': formatted_translation,

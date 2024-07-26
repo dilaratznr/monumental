@@ -56,7 +56,7 @@ def detect_brick_in_center(depth_image):
     print("No suitable contour found.")
     return None, (center_x, center_y)
 
-def draw_brick_boundaries(image, contour, center):
+def draw_brick_boundaries(image, contour, center, translation, rotation):
     # Draw the contour if available
     if contour is not None:
         cv2.drawContours(image, [contour], -1, (0, 255, 0), 2)
@@ -69,7 +69,36 @@ def draw_brick_boundaries(image, contour, center):
     cv2.putText(image, center_coords, (center[0] + 10, center[1] - 10), 
                 cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
 
+    # Display 3D Pose Information
+    pose_text = (f"Translation (mm): x={translation[0]:.2f}, y={translation[1]:.2f}, z={translation[2]:.2f}\n"
+                 f"Rotation (degrees): yaw={rotation['yaw']:.2f}, pitch={rotation['pitch']:.2f}, roll={rotation['roll']:.2f}")
+    y_offset = center[1] + 20
+    for i, line in enumerate(pose_text.split('\n')):
+        cv2.putText(image, line, (10, y_offset + i * 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
+
     print("Drawing completed. Center coordinates:", center_coords)
+    print("3D Pose Information:", pose_text)
+
+    # Visualization of the Estimated 3D Pose
+    # Draw translation vector as an arrow
+    origin = (int(center[0]), int(center[1]))
+    translation_vector = (int(center[0] + translation[0] * 10), int(center[1] - translation[1] * 10))
+    cv2.arrowedLine(image, origin, translation_vector, (255, 255, 0), 2, tipLength=0.3)
+
+    # Visualize rotation using small arrows
+    rotation_vectors = {
+        'yaw': (np.cos(np.radians(rotation['yaw'])), np.sin(np.radians(rotation['yaw']))),
+        'pitch': (np.cos(np.radians(rotation['pitch'])), np.sin(np.radians(rotation['pitch']))),
+        'roll': (np.cos(np.radians(rotation['roll'])), np.sin(np.radians(rotation['roll'])))
+    }
+
+    # Drawing the rotation vectors
+    for angle_name, vector in rotation_vectors.items():
+        end_point = (int(center[0] + vector[0] * 50), int(center[1] + vector[1] * 50))
+        cv2.arrowedLine(image, origin, end_point, (0, 255, 255), 2, tipLength=0.3)
+        cv2.putText(image, angle_name, end_point, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 1, cv2.LINE_AA)
+
+    print("3D Pose Visualization drawn on image.")
 
 def calculate_3d_pose(depth_image, camera_params):
     fx = camera_params['fx']
@@ -112,7 +141,6 @@ def calculate_3d_pose(depth_image, camera_params):
     rotation_dict = {'yaw': rotation[0], 'pitch': rotation[1], 'roll': rotation[2]}
 
     return translation, rotation_dict
-
 def process_images_and_save_rgbd(folder_path):
     color_image_path = os.path.join(folder_path, 'color.png')
     depth_image_path = os.path.join(folder_path, 'depth.png')
@@ -136,26 +164,54 @@ def process_images_and_save_rgbd(folder_path):
     # Detect the brick and highlight it in the processed image
     brick_contour, center = detect_brick_in_center(depth_image)
     processed_image = color_image.copy()  # Use the original color image for drawing
+
+    # Calculate 3D pose
+    translation, rotation = calculate_3d_pose(depth_image, camera_params)
+
     if brick_contour is not None:
-        draw_brick_boundaries(processed_image, brick_contour, center)
+        draw_brick_boundaries(processed_image, brick_contour, center, translation, rotation)
     else:
         cv2.circle(processed_image, center, 10, (0, 0, 255), 2)  # Mark center if no contour found
         center_coords = f"Center: ({center[0]}, {center[1]})"
         cv2.putText(processed_image, center_coords, (center[0] + 10, center[1] - 10), 
                     cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
+        # Display 3D Pose Information
+        pose_text = (f"Translation (mm): x={translation[0]:.2f}, y={translation[1]:.2f}, z={translation[2]:.2f}\n"
+                     f"Rotation (degrees): yaw={rotation['yaw']:.2f}, pitch={rotation['pitch']:.2f}, roll={rotation['roll']:.2f}")
+        y_offset = center[1] + 20
+        for i, line in enumerate(pose_text.split('\n')):
+            cv2.putText(processed_image, line, (10, y_offset + i * 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
+
+        # Visualization of the Estimated 3D Pose
+        # Draw translation vector as an arrow
+        origin = (int(center[0]), int(center[1]))
+        translation_vector = (int(center[0] + translation[0] * 10), int(center[1] - translation[1] * 10))
+        cv2.arrowedLine(processed_image, origin, translation_vector, (255, 255, 0), 2, tipLength=0.3)
+
+        # Visualize rotation using small arrows
+        rotation_vectors = {
+            'yaw': (np.cos(np.radians(rotation['yaw'])), np.sin(np.radians(rotation['yaw']))),
+            'pitch': (np.cos(np.radians(rotation['pitch'])), np.sin(np.radians(rotation['pitch']))),
+            'roll': (np.cos(np.radians(rotation['roll'])), np.sin(np.radians(rotation['roll'])))
+        }
+
+        # Drawing the rotation vectors
+        for angle_name, vector in rotation_vectors.items():
+            end_point = (int(center[0] + vector[0] * 50), int(center[1] + vector[1] * 50))
+            cv2.arrowedLine(processed_image, origin, end_point, (0, 255, 255), 2, tipLength=0.3)
+            cv2.putText(processed_image, angle_name, end_point, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 1, cv2.LINE_AA)
 
     results_dir = os.path.join(settings.MEDIA_ROOT, 'results')
     os.makedirs(results_dir, exist_ok=True, mode=0o755)
     
     rgbd_image_path = os.path.join(results_dir, f'{os.path.basename(folder_path)}_rgbd.png')
     processed_image_path = os.path.join(results_dir, f'{os.path.basename(folder_path)}_processed.png')
+    pose_visualization_path = os.path.join(results_dir, f'{os.path.basename(folder_path)}_pose_visualization.png')
 
     # Save images
     cv2.imwrite(rgbd_image_path, rgbd_image)
     cv2.imwrite(processed_image_path, processed_image)
-
-    # Calculate 3D pose
-    translation, rotation = calculate_3d_pose(depth_image, camera_params)
+    cv2.imwrite(pose_visualization_path, processed_image)
 
     # Return the paths and pose information
-    return rgbd_image_path, processed_image_path, np.mean(rgbd_image), translation, rotation
+    return rgbd_image_path, processed_image_path, pose_visualization_path, np.mean(rgbd_image), translation, rotation
