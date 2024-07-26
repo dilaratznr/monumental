@@ -1,13 +1,17 @@
+import json
 from django.shortcuts import render
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 import os
-import uuid
-from .services.pose_service import PoseService
 from django.conf import settings
+from .services.pose_service import PoseService
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+# Ensure you have the correct import path
+from image_processing.image_processing import process_images_and_save_rgbd,load_images_and_camera_params
+
+import uuid
 
 @csrf_exempt
 def process_images_from_request(request):
@@ -52,75 +56,68 @@ def process_images_from_request(request):
         if os.path.exists(camera_params_path):
             os.remove(camera_params_path)
         return JsonResponse({'error': str(e)}, status=500)
-
 def format_translation_rotation(translation, rotation):
     try:
-        # Convert translation coordinates to float
         translation = [float(coord) for coord in translation]
-
-        # Extract and convert the rotation angles to float
         yaw = float(rotation.get('yaw', 0.0))
         pitch = float(rotation.get('pitch', 0.0))
         roll = float(rotation.get('roll', 0.0))
 
-        # Format the translation and rotation strings
         translation_str = f"Translation (mm): [{translation[0]:.2f}, {translation[1]:.2f}, {translation[2]:.2f}]"
         rotation_str = f"Rotation (degrees): [Yaw: {yaw:.2f}, Pitch: {pitch:.2f}, Roll: {roll:.2f}]"
 
         return translation_str, rotation_str
     except Exception as e:
         return "Error formatting translation", f"Error formatting rotation: {str(e)}"
-
+        return "Error formatting translation", f"Error formatting rotation: {str(e)}"
 def display_results(request):
-    folders = sorted([d for d in os.listdir(os.path.join(settings.MEDIA_ROOT, 'place_quality_inputs')) if os.path.isdir(os.path.join(settings.MEDIA_ROOT, 'place_quality_inputs', d))])
+    folders = sorted([
+        d for d in os.listdir(os.path.join(settings.MEDIA_ROOT, 'place_quality_inputs'))
+        if os.path.isdir(os.path.join(settings.MEDIA_ROOT, 'place_quality_inputs', d))
+    ])
 
     selected_folder = request.GET.get('folder')
-    result = None
+    color_image_path = None
+    depth_image_path = None
+    rgbd_image_path = None
+    processed_image_path = None
+    processed_image_mean_intensity = None
+    camera_params = None
     formatted_translation = None
     formatted_rotation = None
     
     if selected_folder:
         folder_path = os.path.join(settings.MEDIA_ROOT, 'place_quality_inputs', selected_folder)
-        color_image_path = os.path.join(folder_path, 'color.png')
-        depth_image_path = os.path.join(folder_path, 'depth.png')
-        camera_params_path = os.path.join(folder_path, 'cam.json')
+        color_image_path = os.path.join(settings.MEDIA_URL, 'place_quality_inputs', selected_folder, 'color.png')
+        depth_image_path = os.path.join(settings.MEDIA_URL, 'place_quality_inputs', selected_folder, 'depth.png')
 
-        result = PoseService.process_image_files(color_image_path, depth_image_path, camera_params_path)
-        
-        if result:
-            result['color_image_path'] = f"{settings.MEDIA_URL}place_quality_inputs/{selected_folder}/color.png"
-            result['depth_image_path'] = f"{settings.MEDIA_URL}place_quality_inputs/{selected_folder}/depth.png"
-            result['processed_image_path'] = f"{settings.MEDIA_URL}results/{os.path.basename(result['processed_image_path'])}"
+        absolute_rgbd_image_path, absolute_processed_image_path, processed_image_mean_intensity, translation, rotation = process_images_and_save_rgbd(folder_path)
+        if absolute_rgbd_image_path:
+            relative_rgbd_path = os.path.relpath(absolute_rgbd_image_path, settings.MEDIA_ROOT)
+            rgbd_image_path = os.path.join(settings.MEDIA_URL, relative_rgbd_path).replace("\\", "/")
+        if absolute_processed_image_path:
+            relative_processed_path = os.path.relpath(absolute_processed_image_path, settings.MEDIA_ROOT)
+            processed_image_path = os.path.join(settings.MEDIA_URL, relative_processed_path).replace("\\", "/")
 
-            formatted_translation, formatted_rotation = format_translation_rotation(result['translation'], result['rotation'])
+        try:
+            with open(os.path.join(folder_path, 'cam.json'), 'r') as f:
+                camera_params = json.load(f)
+        except Exception as e:
+            camera_params = str(e)
 
-            output_path = os.path.join(settings.MEDIA_ROOT, 'results', 'pose_visualization.png')
-            os.makedirs(os.path.dirname(output_path), exist_ok=True)
-
-            visualize_pose(result['translation'], output_path)
-
-            result['pose_visualization_path'] = f"{settings.MEDIA_URL}results/pose_visualization.png"
+        formatted_translation, formatted_rotation = format_translation_rotation(translation, rotation)
 
     return render(request, 'result.html', {
-        'result': result,
+        'result': {
+            'color_image_path': color_image_path,
+            'depth_image_path': depth_image_path,
+            'rgbd_image_path': rgbd_image_path,
+            'processed_image_path': processed_image_path,
+            'processed_image_mean_intensity': processed_image_mean_intensity,
+            'camera_params': camera_params,
+            'translation': formatted_translation,
+            'rotation': formatted_rotation,
+        },
         'folders': folders,
         'selected_folder': selected_folder,
-        'formatted_translation': formatted_translation,
-        'formatted_rotation': formatted_rotation,
-        'pose_visualization_path': result.get('pose_visualization_path') if result else None
     })
-
-def visualize_pose(translation, output_path):
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-    ax.scatter(0, 0, 0, c='r', marker='o', label='Camera Origin')
-    ax.scatter(*translation, c='b', marker='^', label='Estimated Brick Position')
-    ax.plot([0, translation[0]], [0, translation[1]], [0, translation[2]], 'g--')
-    ax.set_xlabel('X (mm)')
-    ax.set_ylabel('Y (mm)')
-    ax.set_zlabel('Z (mm)')
-    ax.set_title('Estimated 3D Pose of the Brick')
-    ax.legend()
-
-    plt.savefig(output_path)
-    plt.close(fig)

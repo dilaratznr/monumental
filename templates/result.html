@@ -114,6 +114,10 @@
                 </div>
             </div>
             <div class="section">
+                <h2>RGB-D Depth Image</h2>
+                <img src="{{ result.rgbd_image_path }}" alt="RGB-D Depth Image">
+            </div>
+            <div class="section">
                 <h2>Processed Image</h2>
                 <img src="{{ result.processed_image_path }}" alt="Processed Image">
             </div>
@@ -135,12 +139,12 @@
             </div>
             <div class="section">
                 <h2>Estimated 3D Pose</h2>
-                <p><strong>Translation (mm):</strong> {{ formatted_translation }}</p>
-                <p><strong>Rotation (degrees):</strong> {{ formatted_rotation }}</p>
+                <p><strong>Translation (mm):</strong> {{ result.translation }}</p>
+                <p><strong>Rotation (degrees):</strong> {{ result.rotation }}</p>
             </div>
             <div class="section">
                 <h2>Estimated 3D Pose Visualization</h2>
-                <img src="{{ pose_visualization_path }}" alt="Estimated 3D Pose">
+                <img src="{{ result.pose_visualization_path }}" alt="Estimated 3D Pose">
             </div>
         {% endif %}
     </div>
@@ -148,5 +152,4 @@
         <p>© 2024 Brick Pose Estimation. All rights reserved.</p>
     </div>
 </body>
-
 </html>
