@@ -13,21 +13,49 @@ def load_images_and_camera_params(color_image_path, depth_image_path, camera_par
     return color_image, depth_image, camera_params
 
 def detect_brick_in_center(depth_image):
-    """Detects the brick in the center of the image based on depth information."""
+    """
+    Detects the brick in the center of the image based on depth information.
+    """
     height, width = depth_image.shape
     center_x, center_y = width // 2, height // 2
-    region_size = 100  # Size of the region to search for the brick
+    region_size = 100  # Define the region size around the center to look for the brick
     region = depth_image[center_y - region_size:center_y + region_size,
                          center_x - region_size:center_x + region_size]
     
-    # Example processing: Find contours in this region
-    _, thresholded = cv2.threshold(region, 1, 255, cv2.THRESH_BINARY)
-    contours, _ = cv2.findContours(thresholded.astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    # Normalize the region for better contour detection
+    min_val, max_val = np.min(region), np.max(region)
+    if max_val == min_val:
+        return None, (center_x, center_y)
+    
+    normalized_region = (region - min_val) / (max_val - min_val) * 255
+    normalized_region = np.uint8(normalized_region)
+
+    # Apply thresholding to highlight the brick
+    _, thresholded = cv2.threshold(normalized_region, 50, 255, cv2.THRESH_BINARY)
+    contours, _ = cv2.findContours(thresholded, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    
     if contours:
-        # Assume the largest contour is the brick
-        largest_contour = max(contours, key=cv2.contourArea)
-        return largest_contour, (center_x, center_y)
+        largest_contour = None
+        max_area = 0
+        for contour in contours:
+            area = cv2.contourArea(contour)
+            if area > max_area:
+                # Calculate the bounding box for the contour
+                x, y, w, h = cv2.boundingRect(contour)
+                
+                # Check if the bounding box is near the center and has reasonable size
+                if (center_x - region_size / 2 < x + w / 2 < center_x + region_size / 2) and \
+                   (center_y - region_size / 2 < y + h / 2 < center_y + region_size / 2):
+                    
+                    aspect_ratio = float(w) / h
+                    if 0.5 < aspect_ratio < 2.0:  # Assuming the brick has a roughly rectangular shape
+                        max_area = area
+                        largest_contour = contour
+        
+        if largest_contour is not None:
+            return largest_contour, (center_x, center_y)
     return None, (center_x, center_y)
+
 def calculate_3d_pose(depth_image, camera_params):
     # Get the camera parameters
     fx = camera_params['fx']
